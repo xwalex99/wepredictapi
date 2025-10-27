@@ -5,7 +5,7 @@
   "outputDirectory": ".",
   "framework": null,
   "functions": {
-    "api/index.js": {
+    "index.js": {
       "maxDuration": 30
     }
   }
