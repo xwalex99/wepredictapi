@@ -1,6 +1,7 @@
 const { NestFactory } = require('@nestjs/core');
 const { ValidationPipe } = require('@nestjs/common');
 const { SwaggerModule, DocumentBuilder } = require('@nestjs/swagger');
+const path = require('path');
 
 let cachedApp;
 let isInitializing = false;
@@ -19,56 +20,56 @@ async function bootstrap() {
 
   try {
     isInitializing = true;
-    const path = require('path');
-    const fs = require('fs');
     
-    // Log for debugging
-    console.log('Current working directory:', process.cwd());
+    // Debug: log directories
     console.log('__dirname:', __dirname);
+    console.log('process.cwd():', process.cwd());
     
-    // Check what files are available
+    // Resolve the app.module from the built dist folder
+    const appModulePath = path.resolve(__dirname, '..', 'dist', 'app.module');
+    console.log('Trying to load:', appModulePath);
+    
+    // Check if the path exists
     try {
-      const files = fs.readdirSync(path.join(__dirname, '..'));
-      console.log('Files in parent directory:', files);
+      const fs = require('fs');
+      const files = fs.readdirSync(path.resolve(__dirname, '..', 'dist'));
+      console.log('Files in dist:', files);
     } catch (e) {
-      console.log('Could not read parent directory');
+      console.log('Could not read dist folder:', e.message);
     }
     
-    // Try different possible paths
-    let AppModule;
-    const possiblePaths = [
-      path.join(__dirname, '..', 'dist', 'app.module'),
-      path.join(__dirname, '..', 'app.module'),
-      path.join(process.cwd(), 'dist', 'app.module'),
-      path.join(process.cwd(), 'app.module'),
-    ];
+    const { AppModule } = require(appModulePath);
     
-    for (const modulePath of possiblePaths) {
-      try {
-        console.log('Trying to require:', modulePath);
-        AppModule = require(modulePath);
-        console.log('Successfully loaded from:', modulePath);
-        break;
-      } catch (e) {
-        console.log('Failed:', e.message);
-      }
-    }
-    
-    if (!AppModule) {
-      throw new Error('Could not load AppModule from any path');
-    }
-    
-    const { AppModule: AppModuleExported } = AppModule;
-    const ModuleToUse = AppModuleExported || AppModule;
-    const app = await NestFactory.create(ModuleToUse, {
+    const app = await NestFactory.create(AppModule, {
       logger: process.env.NODE_ENV !== 'production' ? ['error', 'warn'] : false,
       bufferLogs: true,
     });
-    app.enableCors({ origin: true, methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS', credentials: true });
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-    const config = new DocumentBuilder().setTitle('WePredict API').setDescription('API para predicciones').setVersion('1.0').addTag('auth', 'Auth').addTag('app', 'App').build();
+    
+    app.enableCors({ 
+      origin: true, 
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS', 
+      credentials: true 
+    });
+    
+    app.useGlobalPipes(
+      new ValidationPipe({ 
+        whitelist: true, 
+        forbidNonWhitelisted: true, 
+        transform: true 
+      })
+    );
+    
+    const config = new DocumentBuilder()
+      .setTitle('WePredict API')
+      .setDescription('API para predicciones')
+      .setVersion('1.0')
+      .addTag('auth', 'Auth')
+      .addTag('app', 'App')
+      .build();
+    
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('docs', app, document);
+    
     await app.init();
     cachedApp = app;
     isInitializing = false;
@@ -93,7 +94,7 @@ module.exports = async (req, res) => {
       success: false, 
       message: 'Internal server error', 
       error: error.message,
-      stack: error.stack
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
     });
   }
 };
