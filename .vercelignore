@@ -1,8 +1,7 @@
-node_modules
-src
-test
 .git
 .env
 *.md
 !README.md
+!VERCEL_DEPLOY.md
+src
 
