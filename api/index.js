@@ -1,5 +1,6 @@
 const { NestFactory } = require('@nestjs/core');
 const { ValidationPipe } = require('@nestjs/common');
+const { SwaggerModule, DocumentBuilder } = require('@nestjs/swagger');
 
 let cachedApp;
 let isInitializing = false;
@@ -42,6 +43,18 @@ async function bootstrap() {
         transform: true,
       }),
     );
+    
+    // Configurar Swagger
+    const config = new DocumentBuilder()
+      .setTitle('WePredict API')
+      .setDescription('API para gestión de predicciones con autenticación local y Google OAuth')
+      .setVersion('1.0')
+      .addTag('auth', 'Endpoints de autenticación')
+      .addTag('app', 'Endpoints generales')
+      .build();
+    
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs', app, document);
     
     await app.init();
     
