@@ -10,22 +10,36 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     const dbConfig = this.configService.get('database');
-    this.pool = new Pool({
-      host: dbConfig.host,
-      port: dbConfig.port,
-      user: dbConfig.username,
-      password: dbConfig.password,
-      database: dbConfig.database,
-      ssl: dbConfig.ssl,
-    });
-
-    // Test connection
+    
     try {
-      await this.pool.query('SELECT NOW()');
-      console.log('✅ Database connected successfully');
+      this.pool = new Pool({
+        host: dbConfig.host,
+        port: dbConfig.port,
+        user: dbConfig.username,
+        password: dbConfig.password,
+        database: dbConfig.database,
+        ssl: dbConfig.ssl,
+      });
+
+      // Test connection
+      try {
+        await this.pool.query('SELECT NOW()');
+        console.log('✅ Database connected successfully');
+      } catch (error) {
+        console.error('❌ Database connection failed:', error);
+        // En Vercel/serverless, no lanzamos error para evitar crashes en el arranque
+        if (process.env.NODE_ENV === 'production') {
+          console.warn('⚠️ Continuing without database connection in production');
+        } else {
+          throw error;
+        }
+      }
     } catch (error) {
-      console.error('❌ Database connection failed:', error);
-      throw error;
+      console.error('❌ Error initializing database pool:', error);
+      // En serverless, continuamos sin lanzar error
+      if (process.env.NODE_ENV !== 'production') {
+        throw error;
+      }
     }
   }
 
