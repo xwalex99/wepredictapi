@@ -5,14 +5,14 @@
   "outputDirectory": ".",
   "framework": null,
   "functions": {
-    "index.js": {
+    "api/index.js": {
       "maxDuration": 30
     }
   },
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/"
+      "destination": "/api/index.js"
     }
   ]
 }
