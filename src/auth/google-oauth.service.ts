@@ -8,11 +8,14 @@ export class GoogleOAuthService {
 
   constructor(private configService: ConfigService) {
     const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
-    if (!clientId) {
-      throw new Error('GOOGLE_CLIENT_ID not found in environment variables');
+    
+    // Initialize OAuth client lazily to avoid throwing during module initialization
+    if (clientId) {
+      this.client = new OAuth2Client(clientId);
+    } else {
+      console.warn('⚠️ GOOGLE_CLIENT_ID not found in environment variables. Google OAuth will not work.');
+      this.client = null as any; // Will be initialized on first use
     }
-
-    this.client = new OAuth2Client(clientId);
   }
 
   /**
@@ -24,9 +27,20 @@ export class GoogleOAuthService {
     full_name: string;
   }> {
     try {
+      const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+      
+      if (!clientId) {
+        throw new UnauthorizedException('Google OAuth not configured. Missing GOOGLE_CLIENT_ID.');
+      }
+
+      // Lazy initialization if needed
+      if (!this.client) {
+        this.client = new OAuth2Client(clientId);
+      }
+
       const ticket = await this.client.verifyIdToken({
         idToken,
-        audience: this.configService.get<string>('GOOGLE_CLIENT_ID'),
+        audience: clientId,
       });
 
       const payload = ticket.getPayload();
@@ -41,6 +55,7 @@ export class GoogleOAuthService {
         full_name: payload.name || payload.email || 'Google User',
       };
     } catch (error) {
+      console.error('Google OAuth verification error:', error);
       throw new UnauthorizedException('Invalid or expired Google token');
     }
   }

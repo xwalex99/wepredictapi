@@ -19,6 +19,9 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         password: dbConfig.password,
         database: dbConfig.database,
         ssl: dbConfig.ssl,
+        // Add connection timeout for serverless environments
+        connectionTimeoutMillis: 5000,
+        max: 2, // Limit connections for serverless
       });
 
       // Test connection
@@ -28,8 +31,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       } catch (error) {
         console.error('❌ Database connection failed:', error);
         // En Vercel/serverless, no lanzamos error para evitar crashes en el arranque
-        if (process.env.NODE_ENV === 'production') {
-          console.warn('⚠️ Continuing without database connection in production');
+        if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+          console.warn('⚠️ Continuing without database connection in production/serverless');
         } else {
           throw error;
         }
@@ -37,14 +40,16 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       console.error('❌ Error initializing database pool:', error);
       // En serverless, continuamos sin lanzar error
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
         throw error;
       }
     }
   }
 
   async onModuleDestroy() {
-    await this.pool.end();
+    if (this.pool) {
+      await this.pool.end();
+    }
   }
 
   /**
@@ -54,6 +59,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
    * @returns Resultado de la función
    */
   async callFunction<T>(functionName: string, params: any[] = []): Promise<T> {
+    if (!this.pool) {
+      throw new Error('Database pool not initialized. Check environment variables and database connection.');
+    }
+    
     const client = await this.pool.connect();
     try {
       const placeholders = params.map((_, index) => `$${index + 1}`).join(', ');
@@ -83,6 +92,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
    * @returns Resultado de la query
    */
   async query<T = any>(query: string, params: any[] = []): Promise<T[]> {
+    if (!this.pool) {
+      throw new Error('Database pool not initialized. Check environment variables and database connection.');
+    }
+    
     const client = await this.pool.connect();
     try {
       const result = await client.query(query, params);
@@ -99,6 +112,9 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
    * Obtiene un cliente de la pool para transacciones manuales
    */
   async getClient(): Promise<PoolClient> {
+    if (!this.pool) {
+      throw new Error('Database pool not initialized. Check environment variables and database connection.');
+    }
     return await this.pool.connect();
   }
 }

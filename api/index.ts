@@ -6,7 +6,8 @@ export default async function handler(
 ) {
   try {
     // Dynamic import to load compiled module
-    const { getApp } = require('../dist/src/main.vercel');
+    // Path corrected: from dist/api/ we go up one level (../) then into src/
+    const { getApp } = require('../src/main.vercel');
     const app = await getApp();
     const httpAdapter = app.getHttpAdapter();
     
@@ -17,11 +18,12 @@ export default async function handler(
     return expressApp(req, res);
   } catch (err: any) {
     console.error('Serverless error:', err);
+    console.error('Error stack:', err.stack);
     res.status(500).json({
       success: false,
       message: 'Internal Server Error',
       error: err.message,
-      stack: err.stack
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
   }
 }
