@@ -58,6 +58,21 @@ psql -U postgres -d wepredictapi -f database/functions.sql
 $ npm install
 ```
 
+## Swagger Documentation
+
+La API incluye documentación interactiva con Swagger. Una vez iniciado el servidor:
+
+1. Abre tu navegador en: `http://localhost:3000/api`
+2. Explora todos los endpoints disponibles
+3. Prueba los endpoints directamente desde la interfaz
+4. Ve los esquemas de datos y validaciones
+
+La documentación incluye:
+- Descripción de cada endpoint
+- Parámetros requeridos
+- Ejemplos de respuestas
+- Códigos de estado HTTP
+
 ## Compile and run the project
 
 ```bash
