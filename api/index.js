@@ -43,8 +43,8 @@ async function bootstrap() {
 module.exports = async (req, res) => {
   try {
     const app = await bootstrap();
-    const instance = app.getHttpAdapter().getInstance();
-    return instance(req, res);
+    const expressApp = app.getHttpAdapter().getInstance();
+    expressApp(req, res);
   } catch (error) {
     console.error('Error in handler:', error);
     res.status(500).json({ success: false, message: 'Internal server error', error: process.env.NODE_ENV !== 'production' ? error.message : undefined });
