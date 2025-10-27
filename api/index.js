@@ -19,7 +19,17 @@ async function bootstrap() {
 
   try {
     isInitializing = true;
-    const { AppModule } = require('../dist/app.module');
+    const path = require('path');
+    
+    // Log for debugging
+    console.log('Current working directory:', process.cwd());
+    console.log('__dirname:', __dirname);
+    
+    // Try to resolve the module path
+    let modulePath = path.join(__dirname, '..', 'dist', 'app.module');
+    console.log('Trying to require:', modulePath);
+    
+    const { AppModule } = require(modulePath);
     const app = await NestFactory.create(AppModule, {
       logger: process.env.NODE_ENV !== 'production' ? ['error', 'warn'] : false,
       bufferLogs: true,
@@ -36,6 +46,7 @@ async function bootstrap() {
   } catch (error) {
     isInitializing = false;
     console.error('Error initializing app:', error);
+    console.error('Stack:', error.stack);
     throw error;
   }
 }
@@ -47,7 +58,13 @@ module.exports = async (req, res) => {
     expressApp(req, res);
   } catch (error) {
     console.error('Error in handler:', error);
-    res.status(500).json({ success: false, message: 'Internal server error', error: process.env.NODE_ENV !== 'production' ? error.message : undefined });
+    console.error('Stack:', error.stack);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error', 
+      error: error.message,
+      stack: error.stack
+    });
   }
 };
 
