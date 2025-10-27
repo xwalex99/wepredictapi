@@ -3,6 +3,8 @@
 *.md
 !README.md
 !VERCEL_DEPLOY.md
-src
 test
+node_modules
+coverage
+dist
 
