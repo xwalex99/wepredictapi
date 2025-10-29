@@ -4,12 +4,15 @@ import { Pool, PoolClient } from 'pg';
 
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
-  private pool: Pool;
+  private pool: Pool | null;
 
   constructor(private configService: ConfigService) {}
 
   async onModuleInit() {
     const dbConfig = this.configService.get('database');
+    const isDevelopment = process.env.NODE_ENV !== 'production' && !process.env.VERCEL;
+    // DB_REQUIRED must be explicitly 'true' to require DB. Default is to allow graceful failure.
+    const dbRequired = process.env.DB_REQUIRED === 'true';
     
     try {
       this.pool = new Pool({
@@ -29,18 +32,44 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         await this.pool.query('SELECT NOW()');
         console.log('✅ Database connected successfully');
       } catch (error) {
-        console.error('❌ Database connection failed:', error);
-        // En Vercel/serverless, no lanzamos error para evitar crashes en el arranque
-        if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
-          console.warn('⚠️ Continuing without database connection in production/serverless');
+        console.error('❌ Database connection failed:', error.message);
+        
+        // Si es un error de DNS, dar más información
+        if (error.code === 'ENOTFOUND') {
+          console.error(`⚠️  Cannot resolve hostname: ${dbConfig.host}`);
+          console.error('💡 Check your DB_HOST environment variable. Supabase hosts typically look like:');
+          console.error('   aws-0-[region].pooler.supabase.com (for connection pooling)');
+          console.error('   Or check your Supabase dashboard for the correct connection string');
+          console.error('\n💡 To allow the app to run without a database, set DB_REQUIRED=false');
+          console.error('💡 To require a database connection, set DB_REQUIRED=true');
+        }
+        
+        // If DB is not required (default), or we're in production/serverless, continue without DB
+        if (!dbRequired) {
+          console.warn('⚠️  Continuing without database connection. Database operations will fail.');
+          this.pool = null;
         } else {
           throw error;
         }
       }
     } catch (error) {
-      console.error('❌ Error initializing database pool:', error);
-      // En serverless, continuamos sin lanzar error
-      if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+      console.error('❌ Error initializing database pool:', error.message);
+      
+      // Si es un error de DNS, dar más información
+      if (error.code === 'ENOTFOUND') {
+        console.error(`⚠️  Cannot resolve hostname: ${dbConfig.host}`);
+        console.error('💡 Check your DB_HOST environment variable. Supabase hosts typically look like:');
+        console.error('   aws-0-[region].pooler.supabase.com (for connection pooling)');
+        console.error('   Or check your Supabase dashboard for the correct connection string');
+        console.error('\n💡 To allow the app to run without a database, set DB_REQUIRED=false');
+        console.error('💡 To require a database connection, set DB_REQUIRED=true');
+      }
+      
+      // If DB is not required (default), continue without DB
+      if (!dbRequired) {
+        console.warn('⚠️  Continuing without database connection. Database operations will fail.');
+        this.pool = null;
+      } else {
         throw error;
       }
     }
