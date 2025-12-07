@@ -1,26 +1,49 @@
-# compiled output
-/dist
-/node_modules
-/build
+
+# Node / build
+/node_modules/
+/dist/
+/build/
+.build/
+
+# Package manager locks
+package-lock.json
+pnpm-lock.yaml
+.pnp.js
 
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
+
+# Coverage
+/coverage/
+/.nyc_output/
+
+# NestJS
+.nest/
+
+# Environment files (keep out of repo)
+.env
+.env.*.local
+
+# Runtime files
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # OS
 .DS_Store
+Thumbs.db
 
-# Tests
-/coverage
-/.nyc_output
-
-# IDEs and editors
-/.idea
+# Editors and IDEs
+/.idea/
 .project
 .classpath
 .c9/
@@ -28,32 +51,25 @@ lerna-debug.log*
 .settings/
 *.sublime-workspace
 
-# IDE - VSCode
+# VSCode - keep workspace settings tracked if you want
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-
-# temp directory
+# Temp
 .temp
 .tmp
+.cache/
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
+# Misc
+*.tgz
+*.local
+swagger.json
 
-# Diagnostic reports (https://nodejs.org/api/report.html)
-report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+# Docker
+docker-compose.override.yml
 
 # Google OAuth credentials
 *client_secret*.json
