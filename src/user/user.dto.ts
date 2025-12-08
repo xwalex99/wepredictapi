@@ -22,7 +22,7 @@ export class LoginDto {
 }
 
 export class UserResponseDto {
-  id: number;
+  id: string; // UUID como string
   email: string;
   username: string;
   created_at?: Date;

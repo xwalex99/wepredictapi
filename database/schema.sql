@@ -1,109 +1,91 @@
+-- Active: 1765132999174@@46.224.25.116@3306@wepredictapp
+
 -- ========================================
--- Crear tabla wpuser
+-- Crear tabla wpuser con UUID (CHAR(36) para UUID)
 -- ========================================
 CREATE TABLE IF NOT EXISTS wpuser (
-  id SERIAL PRIMARY KEY,
+  id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
   email VARCHAR(255) UNIQUE NOT NULL,
   username VARCHAR(100) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- ========================================
--- Procedimiento: sp_register_user
+-- Procedimiento: register_user
 -- Registra un nuevo usuario
 -- ========================================
-CREATE OR REPLACE FUNCTION sp_register_user(
-  p_email VARCHAR,
-  p_username VARCHAR,
-  p_password_hash VARCHAR
+DELIMITER $$
+
+CREATE PROCEDURE register_user(
+  IN p_email VARCHAR(255),
+  IN p_username VARCHAR(100),
+  IN p_password_hash VARCHAR(255)
 )
-RETURNS TABLE (
-  success BOOLEAN,
-  message VARCHAR,
-  user_id INTEGER
-) AS $$
-DECLARE
-  v_user_id INTEGER;
 BEGIN
-  -- Insertar usuario
+  DECLARE v_user_id CHAR(36);
+  DECLARE CONTINUE HANDLER FOR SQLEXCEPTION
+  BEGIN
+    SELECT FALSE as success, 'Error al registrar usuario' as message, NULL as user_id;
+  END;
+  
   INSERT INTO wpuser (email, username, password, created_at, updated_at)
-  VALUES (p_email, p_username, p_password_hash, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-  RETURNING id INTO v_user_id;
+  VALUES (p_email, p_username, p_password_hash, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+  
+  SELECT ID INTO v_user_id FROM wpuser WHERE email = p_email LIMIT 1;
+  
+  SELECT TRUE as success, 'Usuario registrado exitosamente' as message, v_user_id as user_id;
+END$$
 
-  RETURN QUERY SELECT true, 'Usuario registrado exitosamente'::VARCHAR, v_user_id;
-
-EXCEPTION WHEN unique_violation THEN
-  RETURN QUERY SELECT false, 'El email o username ya existe'::VARCHAR, NULL::INTEGER;
-WHEN OTHERS THEN
-  RETURN QUERY SELECT false, 'Error al registrar usuario'::VARCHAR, NULL::INTEGER;
-END;
-$$ LANGUAGE plpgsql;
+DELIMITER ;
 
 -- ========================================
--- Procedimiento: sp_login_user
+-- Procedimiento: login_user
 -- Valida credenciales del usuario
 -- ========================================
-CREATE OR REPLACE FUNCTION sp_login_user(
-  p_email VARCHAR,
-  p_password_hash VARCHAR
+DELIMITER $$
+
+CREATE PROCEDURE login_user(
+  IN p_email VARCHAR(255),
+  IN p_password_hash VARCHAR(255)
 )
-RETURNS TABLE (
-  success BOOLEAN,
-  message VARCHAR,
-  user_id INTEGER,
-  username VARCHAR,
-  email VARCHAR
-) AS $$
-DECLARE
-  v_user_id INTEGER;
-  v_username VARCHAR;
-  v_email VARCHAR;
-  v_password VARCHAR;
 BEGIN
-  -- Buscar usuario por email
+  DECLARE v_user_id CHAR(36);
+  DECLARE v_username VARCHAR(100);
+  DECLARE v_email VARCHAR(255);
+  DECLARE v_password VARCHAR(255);
+  
   SELECT id, username, email, password
   INTO v_user_id, v_username, v_email, v_password
   FROM wpuser
-  WHERE wpuser.email = p_email;
-
-  -- Si no existe
+  WHERE wpuser.email = p_email
+  LIMIT 1;
+  
   IF v_user_id IS NULL THEN
-    RETURN QUERY SELECT false, 'Usuario no encontrado'::VARCHAR, NULL::INTEGER, NULL::VARCHAR, NULL::VARCHAR;
-    RETURN;
+    SELECT FALSE as success, 'Usuario no encontrado' as message, NULL as user_id, NULL as username, NULL as email;
+  ELSEIF v_password != p_password_hash THEN
+    SELECT FALSE as success, 'Credenciales inválidas' as message, NULL as user_id, NULL as username, NULL as email;
+  ELSE
+    SELECT TRUE as success, 'Login exitoso' as message, v_user_id as user_id, v_username as username, v_email as email;
   END IF;
+END$$
 
-  -- Validar contraseña (comparar hashes)
-  IF v_password != p_password_hash THEN
-    RETURN QUERY SELECT false, 'Credenciales inválidas'::VARCHAR, NULL::INTEGER, NULL::VARCHAR, NULL::VARCHAR;
-    RETURN;
-  END IF;
-
-  RETURN QUERY SELECT true, 'Login exitoso'::VARCHAR, v_user_id, v_username, v_email;
-
-EXCEPTION WHEN OTHERS THEN
-  RETURN QUERY SELECT false, 'Error al realizar login'::VARCHAR, NULL::INTEGER, NULL::VARCHAR, NULL::VARCHAR;
-END;
-$$ LANGUAGE plpgsql;
+DELIMITER ;
 
 -- ========================================
--- Procedimiento: sp_get_user_by_id
+-- Procedimiento: get_user_by_id
 -- Obtiene datos del usuario por ID
 -- ========================================
-CREATE OR REPLACE FUNCTION sp_get_user_by_id(
-  p_user_id INTEGER
+DELIMITER $$
+
+CREATE PROCEDURE get_user_by_id(
+  IN p_user_id CHAR(36)
 )
-RETURNS TABLE (
-  id INTEGER,
-  email VARCHAR,
-  username VARCHAR,
-  created_at TIMESTAMP
-) AS $$
 BEGIN
-  RETURN QUERY
-  SELECT wpuser.id, wpuser.email, wpuser.username, wpuser.created_at
+  SELECT id, email, username, created_at
   FROM wpuser
   WHERE wpuser.id = p_user_id;
-END;
-$$ LANGUAGE plpgsql;
+END$$
+
+DELIMITER ;

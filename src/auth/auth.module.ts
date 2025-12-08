@@ -8,7 +8,7 @@ import { JwtGuard } from './jwt.guard';
   imports: [
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+      secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '24h' },
     }),
   ],

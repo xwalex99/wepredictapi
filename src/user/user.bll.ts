@@ -103,7 +103,7 @@ export class UserBll {
   /**
    * Obtiene información del usuario
    */
-  async getUserInfo(userId: number): Promise<UserResponseDto> {
+  async getUserInfo(userId: string): Promise<UserResponseDto> {
     const user = await this.userDal.getUserById(userId);
 
     if (!user) {

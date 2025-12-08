@@ -5,13 +5,13 @@ import { RegisterDto, LoginDto } from './user.dto';
 export interface RegisterResponse {
   success: boolean;
   message: string;
-  user_id?: number;
+  user_id?: string; // UUID como string
 }
 
 export interface LoginResponse {
   success: boolean;
   message: string;
-  user_id?: number;
+  user_id?: string; // UUID como string
   username?: string;
   email?: string;
 }
@@ -22,11 +22,11 @@ export class UserDal {
 
   /**
    * Registra un nuevo usuario en la BD
-   * Llama al procedimiento sp_register_user
+   * Llama al procedimiento register_user
    */
   async registerUser(dto: RegisterDto, hashedPassword: string): Promise<RegisterResponse> {
     const result = await this.commonDal.callProcedureOne<RegisterResponse>(
-      'sp_register_user',
+      'register_user',
       [dto.email, dto.username, hashedPassword],
     );
 
@@ -35,11 +35,11 @@ export class UserDal {
 
   /**
    * Valida credenciales del usuario
-   * Llama al procedimiento sp_login_user
+   * Llama al procedimiento login_user
    */
   async loginUser(dto: LoginDto, hashedPassword: string): Promise<LoginResponse> {
     const result = await this.commonDal.callProcedureOne<LoginResponse>(
-      'sp_login_user',
+      'login_user',
       [dto.email, hashedPassword],
     );
 
@@ -49,9 +49,9 @@ export class UserDal {
   /**
    * Obtiene datos del usuario por ID
    */
-  async getUserById(userId: number) {
+  async getUserById(userId: string) {
     const result = await this.commonDal.callProcedureOne(
-      'sp_get_user_by_id',
+      'get_user_by_id',
       [userId],
     );
 
