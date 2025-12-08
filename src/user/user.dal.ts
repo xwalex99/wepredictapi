@@ -25,12 +25,16 @@ export class UserDal {
    * Llama al procedimiento register_user
    */
   async registerUser(dto: RegisterDto, hashedPassword: string): Promise<RegisterResponse> {
-    const result = await this.commonDal.callProcedureOne<RegisterResponse>(
-      'register_user',
-      [dto.email, dto.username, hashedPassword],
-    );
-
-    return result || { success: false, message: 'Error registrando usuario' };
+    const raw = await this.commonDal.callProcedure('register_user', [dto.email, dto.username, hashedPassword]);
+    // raw puede ser RowDataPacket[][] o RowDataPacket[]; normalizamos para obtener la primera fila
+    let rows: any[] = Array.isArray(raw) && Array.isArray(raw[0]) ? raw[0] : raw;
+    const first = rows && rows[0] ? rows[0] : null;
+    if (!first) return { success: false, message: 'Error registrando usuario' };
+    return {
+      success: !!first.success,
+      message: first.message || '',
+      user_id: first.user_id || first.id || undefined,
+    };
   }
 
   /**
@@ -38,23 +42,25 @@ export class UserDal {
    * Llama al procedimiento login_user
    */
   async loginUser(dto: LoginDto, hashedPassword: string): Promise<LoginResponse> {
-    const result = await this.commonDal.callProcedureOne<LoginResponse>(
-      'login_user',
-      [dto.email, hashedPassword],
-    );
-
-    return result || { success: false, message: 'Error en login' };
+    const raw = await this.commonDal.callProcedure('login_user', [dto.email, hashedPassword]);
+    let rows: any[] = Array.isArray(raw) && Array.isArray(raw[0]) ? raw[0] : raw;
+    const first = rows && rows[0] ? rows[0] : null;
+    if (!first) return { success: false, message: 'Error en login' };
+    return {
+      success: !!first.success,
+      message: first.message || '',
+      user_id: first.user_id || first.id || undefined,
+      username: first.username || undefined,
+      email: first.email || undefined,
+    };
   }
 
   /**
    * Obtiene datos del usuario por ID
    */
   async getUserById(userId: string) {
-    const result = await this.commonDal.callProcedureOne(
-      'get_user_by_id',
-      [userId],
-    );
-
-    return result;
+    const raw = await this.commonDal.callProcedure('get_user_by_id', [userId]);
+    let rows: any[] = Array.isArray(raw) && Array.isArray(raw[0]) ? raw[0] : raw;
+    return rows && rows[0] ? rows[0] : null;
   }
 }

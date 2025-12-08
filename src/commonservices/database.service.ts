@@ -1,10 +1,10 @@
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
-import { Pool, PoolClient, QueryConfig } from 'pg';
-import { PG_POOL } from './db.provider';
+import { Pool, PoolConnection, RowDataPacket } from 'mysql2/promise';
+import { DB_POOL } from './db.provider';
 
 @Injectable()
 export class DatabaseService implements OnModuleDestroy {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(@Inject(DB_POOL) private readonly pool: Pool) {}
 
   async onModuleDestroy() {
     if (this.pool) {
@@ -12,29 +12,33 @@ export class DatabaseService implements OnModuleDestroy {
     }
   }
 
-  async query<T extends Record<string, any> = Record<string, any>>(
-    text: string | QueryConfig,
-    params?: any[],
-  ): Promise<{ rows: T[] }> {
-    return this.pool.query(text as any, params) as unknown as Promise<{ rows: T[] }>;
+  /**
+   * Ejecuta una consulta SQL y retorna las filas.
+   * Para procedimientos MySQL (CALL) devuelve la primera result set.
+   */
+  async query(sql: string, params: any[] = []): Promise<any> {
+    // Retornamos exactamente lo que mysql2/promise devuelve en rows.
+    // Puede ser: RowDataPacket[] | RowDataPacket[][] dependiendo del query (CALL devuelve array de resultsets).
+    const [rows] = await this.pool.query<RowDataPacket[] | RowDataPacket[][]>(sql, params);
+    return rows;
   }
 
-  async getClient(): Promise<PoolClient> {
-    return this.pool.connect();
+  async getConnection(): Promise<PoolConnection> {
+    return this.pool.getConnection();
   }
 
-  async transaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
-    const client = await this.getClient();
+  async transaction<T>(fn: (conn: PoolConnection) => Promise<T>): Promise<T> {
+    const conn = await this.getConnection();
     try {
-      await client.query('BEGIN');
-      const res = await fn(client);
-      await client.query('COMMIT');
+      await conn.beginTransaction();
+      const res = await fn(conn);
+      await conn.commit();
       return res;
     } catch (err) {
-      await client.query('ROLLBACK');
+      await conn.rollback();
       throw err;
     } finally {
-      client.release();
+      conn.release();
     }
   }
 }
