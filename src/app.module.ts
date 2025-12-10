@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { DatabaseModule } from './commonservices/database.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
+import { ChatGptModule } from './chatgpt/chatgpt.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { UserModule } from './user/user.module';
     DatabaseModule,
     AuthModule,
     UserModule,
+    ChatGptModule,
   ],
   controllers: [AppController],
   providers: [AppService],
